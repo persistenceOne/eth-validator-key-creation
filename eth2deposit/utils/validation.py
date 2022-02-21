@@ -50,15 +50,19 @@ def validate_deposit(deposit_data_dict: Dict[str, Any], credential: Credential) 
 
     # Verify pubkey
     if len(pubkey) != 48:
+        print("failed pubkey")
         return False
     if pubkey != credential.signing_pk:
+        print("failed wrong key")
         return False
 
     # Verify withdrawal credential
     if len(withdrawal_credentials) != 32:
+        print("failed withdrawal_credentials ")
         return False
     if withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX == credential.withdrawal_prefix:
         if withdrawal_credentials[1:] != SHA256(credential.withdrawal_pk)[1:]:
+            print("withdrawal_credentials not bls prefix")
             return False
     elif withdrawal_credentials[:1] == ETH1_ADDRESS_WITHDRAWAL_PREFIX == credential.withdrawal_prefix:
         if withdrawal_credentials[1:12] != b'\x00' * 11:
@@ -71,7 +75,7 @@ def validate_deposit(deposit_data_dict: Dict[str, Any], credential: Credential) 
         return False
 
     # Verify deposit amount
-    if not MIN_DEPOSIT_AMOUNT < amount <= MAX_DEPOSIT_AMOUNT:
+    if not MIN_DEPOSIT_AMOUNT <= amount <= MAX_DEPOSIT_AMOUNT:
         return False
 
     # Verify deposit signature && pubkey
@@ -88,6 +92,8 @@ def validate_deposit(deposit_data_dict: Dict[str, Any], credential: Credential) 
         amount=amount,
         signature=signature,
     )
+    print("signed_deposit ")
+
     return signed_deposit.hash_tree_root == deposit_message_root
 
 
