@@ -27,7 +27,7 @@ with open("contracts/deposit_contract.json", 'r') as file:
 depositcontract = web3_eth.eth.contract(abi=abi, address=Web3.toChecksumAddress(sys.argv[2]))
 mnemonic = get_mnemonic(language='english', words_path=WORD_LISTS_PATH)
 
-num_validator = 10
+num_validator = 16
 keystore_password = sys.argv[3]
 print(keystore_password)
 
@@ -98,8 +98,6 @@ credentials = generate_keys(mnemonic=mnemonic, validator_start_index=0, num_vali
 
 for credential in credentials.credentials:
     deposit = credential.deposit_datum_dict
-    print(deposit)
     deposit_to_eth2_contract(deposit['pubkey'].hex(), deposit['withdrawal_credentials'].hex(),
                              deposit['signature'].hex(),
                              deposit['deposit_data_root'].hex())
-    time.sleep(10)

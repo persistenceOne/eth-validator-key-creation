@@ -24,6 +24,6 @@ This will make a schedule deposit of one key per hour for 4 validators
     - KEYSTORE_PASSWORD: Password to encrypt the validator private keystore file
     - WITHDRAWAL_CREDS: Withdrawal Contract address where eth withdrawal will happen
 ```
-  python3 genesis.py <PRIVATE_KEY> <KEYSMANAGER_ADDRESS> <DEPOSIT_CONTRACT_ADDRESS> <KEYSTORE_PASSWORD> <WITHDRAWAL_CREDS>
+  python3 node_operator.py <PRIVATE_KEY> <KEYSMANAGER_ADDRESS> <DEPOSIT_CONTRACT_ADDRESS> <KEYSTORE_PASSWORD> <WITHDRAWAL_CREDS>
 ```
 
