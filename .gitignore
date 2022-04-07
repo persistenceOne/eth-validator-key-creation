@@ -133,3 +133,5 @@ keys2
 keys_1
 keys_local_beacon
 genesis
+node_operator
+eth2deposit/test*

@@ -20,15 +20,15 @@ from eth2deposit.utils.validation import verify_deposit_data_json
 web3_eth = Web3(Web3.HTTPProvider("http://127.0.0.1:8545"))
 web3_eth.isConnected()
 web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
-account = web3_eth.eth.account.privateKeyToAccount(sys.argv[1])
+account = web3_eth.eth.account.privateKeyToAccount("0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6")
 web3_eth.eth.account.enable_unaudited_hdwallet_features()
 with open("contracts/deposit_contract.json", 'r') as file:
     abi = file.read()
-depositcontract = web3_eth.eth.contract(abi=abi, address=Web3.toChecksumAddress(sys.argv[2]))
+depositcontract = web3_eth.eth.contract(abi=abi, address=Web3.toChecksumAddress("0x5FbDB2315678afecb367f032d93F642f64180aa3"))
 mnemonic = get_mnemonic(language='english', words_path=WORD_LISTS_PATH)
 
 num_validator = 16
-keystore_password = sys.argv[3]
+keystore_password = "test1234"
 print(keystore_password)
 
 
