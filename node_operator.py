@@ -23,7 +23,7 @@ web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
 account = web3_eth.eth.account.privateKeyToAccount(sys.argv[2])
 web3_eth.eth.account.enable_unaudited_hdwallet_features()
 
-KeysManager = "0xA0b182BB41d1192ceB3212c28c419b4D7dF9744d"
+KeysManager = "0xd7C8052A5db95BBA40F3AE3882E6127A068BAeF9"
 with open("contracts/keysmanager.json", 'r') as file:
     a = file.read()
 keysmanager_contract = web3_eth.eth.contract(abi=a, address=Web3.toChecksumAddress(KeysManager))
