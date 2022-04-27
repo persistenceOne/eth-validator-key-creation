@@ -36,9 +36,11 @@ activate.py
 - This script will do a transaction to pstake stketh smart contract to make your verified key active 
 and issue you a refund
 - Params to pass:
-  - ETH1_ENDPOINT: endpoint to connect to eth1 chain
-  - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
-  - SUBGRAPH_ENDPOINT: endpoint to connect to pstake stketh subgraph
+  - Required:
+    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
+    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
+    - SUBGRAPH_ENDPOINT: endpoint to connect to pstake stketh subgraph
 ```
-  python3 activate.py <ETH1_ENDPOINT> <PRIVATE_KEY> <SUBGRAPH_ENDPOINT>
+  python3 activate.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -graph <SUBGRAPH_ENDPOINT>
 ```
+- For more help just pass -h flag `python3 activate.py -h`

@@ -1,8 +1,8 @@
 import json
 import sys
-
 import requests
 from web3 import Web3
+import argparse
 
 
 class KeysSubgraph:
@@ -63,12 +63,12 @@ class Issuer:
             print('TX reverted')
 
 
-if __name__ == '__main__':
-    with open("contracts/Issuer.json", 'r') as file:
+def main(eth1_endpoint, graph_endpoint, private_key, contract_address, contract_abi):
+    with open(contract_abi, 'r') as file:
         a = json.load(file)
-    issuer = Issuer(a['abi'], "0x2aDd159D38d9Dd1d980Bc017666073F91823d56d", sys.argv[1])
-    issuer.set_account(sys.argv[2])
-    subgraph = KeysSubgraph(sys.argv[3])
+    issuer = Issuer(a['abi'], contract_address, eth1_endpoint)
+    issuer.set_account(private_key)
+    subgraph = KeysSubgraph(graph_endpoint)
     validators = subgraph.get_validators(issuer.account.address)
     verified = []
     unverified = []
@@ -80,18 +80,37 @@ if __name__ == '__main__':
             verified.append(validator["publicKey"])
         if validator["status"] == "UNVERIFIED":
             unverified.append(validator["publicKey"])
-    print(f"You have {len(unverified)} unverified validators, {len(verified)} verified validators and {len(deposited)} active validators ")
+    print(
+        f"You have {len(unverified)} unverified validators, {len(verified)} verified validators and {len(deposited)} active validators ")
     if len(verified) > 0:
-        print("doing activating keys transaction")
+        print("Doing activating keys transaction")
         for key in verified:
-            if issuer.web3_eth.eth.get_balance(issuer.account.address)/10**16 > 32:
+            if Web3.fromWei(issuer.web3_eth.eth.get_balance(Web3.toChecksumAddress(contract_address)), "ether") > 32:
                 tx = issuer.depositToEth2(key)
                 issuer.do_transaction(tx)
             else:
-                print("balance of pool low for activation")
+                print(
+                    f"Balance of pool low for activation. \nCurrent balance: {Web3.fromWei(issuer.web3_eth.eth.get_balance(Web3.toChecksumAddress(contract_address)), 'ether')}")
                 break
     else:
         print("No activating deposit pending")
 
 
-
+parser = argparse.ArgumentParser("Keys activation script for node operators")
+required = parser.add_argument_group("required arguments")
+required.add_argument("-eth1", "--ethereum-endpoint",
+                      help="either a websocket or http endpoint(Eg:http://127.0.0.1:8545)",
+                      required=True)
+required.add_argument("-graph", "--graph-endpoint",
+                      help="http endpoint to graph node for queries(Eg: http://localhost:8000/subgraphs/name/keysmanager)",
+                      required=True)
+required.add_argument("-priv", "--private-key",
+                      help="private key associated with the account whitelisted with pstake stketh to make the transaction",
+                      required=True)
+parser.add_argument("-contract", "--contract-address", help="contract address to make the transaction to",
+                    default="0x2aDd159D38d9Dd1d980Bc017666073F91823d56d")
+parser.add_argument("-abi", "--contract-abi", help="telegram channel id bot is subscribed to for sending error",
+                    default="contracts/Issuer.json")
+args = parser.parse_args()
+print(args)
+main(args.ethereum_endpoint,args.graph_endpoint,args.private_key,args.contract_address,args.contract_abi)
