@@ -82,11 +82,14 @@ if __name__ == '__main__':
             unverified.append(validator["publicKey"])
     print(f"You have {len(unverified)} unverified validators, {len(verified)} verified validators and {len(deposited)} active validators ")
     if len(verified) > 0:
-        if issuer.web3_eth.eth.get_balance(issuer.account.address)/10**16 > 32:
-            print("doing activating keys transaction")
-            for key in verified:
+        print("doing activating keys transaction")
+        for key in verified:
+            if issuer.web3_eth.eth.get_balance(issuer.account.address)/10**16 > 32:
                 tx = issuer.depositToEth2(key)
                 issuer.do_transaction(tx)
+            else:
+                print("balance of pool low for activation")
+                break
     else:
         print("No activating deposit pending")
 
