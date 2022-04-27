@@ -96,21 +96,23 @@ def main(eth1_endpoint, graph_endpoint, private_key, contract_address, contract_
         print("No activating deposit pending")
 
 
-parser = argparse.ArgumentParser("Keys activation script for node operators")
-required = parser.add_argument_group("required arguments")
-required.add_argument("-eth1", "--ethereum-endpoint",
-                      help="either a websocket or http endpoint(Eg:http://127.0.0.1:8545)",
-                      required=True)
-required.add_argument("-graph", "--graph-endpoint",
-                      help="http endpoint to graph node for queries(Eg: http://localhost:8000/subgraphs/name/keysmanager)",
-                      required=True)
-required.add_argument("-priv", "--private-key",
-                      help="private key associated with the account whitelisted with pstake stketh to make the transaction",
-                      required=True)
-parser.add_argument("-contract", "--contract-address", help="contract address to make the transaction to",
-                    default="0x2aDd159D38d9Dd1d980Bc017666073F91823d56d")
-parser.add_argument("-abi", "--contract-abi", help="telegram channel id bot is subscribed to for sending error",
-                    default="contracts/Issuer.json")
-args = parser.parse_args()
-print(args)
-main(args.ethereum_endpoint,args.graph_endpoint,args.private_key,args.contract_address,args.contract_abi)
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser("Keys activation script for node operators")
+    required = parser.add_argument_group("required arguments")
+    required.add_argument("-eth1", "--ethereum-endpoint",
+                          help="either a websocket or http endpoint(Eg:http://127.0.0.1:8545)",
+                          required=True)
+    required.add_argument("-graph", "--graph-endpoint",
+                          help="http endpoint to graph node for queries(Eg: http://localhost:8000/subgraphs/name/keysmanager)",
+                          required=True)
+    required.add_argument("-priv", "--private-key",
+                          help="private key associated with the account whitelisted with pstake stketh to make the transaction",
+                          required=True)
+    parser.add_argument("-contract", "--contract-address", help="contract address to make the transaction to",
+                        default="0x2aDd159D38d9Dd1d980Bc017666073F91823d56d")
+    parser.add_argument("-abi", "--contract-abi", help="telegram channel id bot is subscribed to for sending error",
+                        default="contracts/Issuer.json")
+    args = parser.parse_args()
+    print(args)
+    main(args.ethereum_endpoint,args.graph_endpoint,args.private_key,args.contract_address,args.contract_abi)
