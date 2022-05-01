@@ -80,7 +80,7 @@ def submit_key(signature, publkey):
     tx = keysmanager_contract.functions.addValidator(publkey,
                                                      signature,
                                                      account.address).buildTransaction(
-        ({'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 1000000}))
+        ({'from': account.address, 'gasPrice': web3_eth.toWei('2.8', 'gwei'), 'gas': 1500000})) # gasprice * 1.4,The quoted code adds 40% to web3.eth.gasPrice.
     print(tx)
     web3_eth.eth.call(tx)
     tx['nonce'] = web3_eth.eth.get_transaction_count(account.address)
@@ -97,7 +97,7 @@ def submit_key(signature, publkey):
 def deposit_to_eth2_contract(pubkey, withdrawal_credentials, signature, deposit_data_root):
     tx = depositcontract.functions.deposit(
         pubkey, withdrawal_credentials, signature, deposit_data_root).buildTransaction(
-        {'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 100000,
+        {'from': account.address, 'gasPrice': web3_eth.toWei('2.8', 'gwei'), 'gas': 1500000,
          "value": web3_eth.toWei(1, "ether")})
     print(tx)
     web3_eth.eth.call(tx)
