@@ -105,7 +105,6 @@ def main(eth1_endpoint, graph_endpoint, private_key, contract_address, contract_
             unverified.append(validator["publicKey"])
     print(
         f"You have {len(unverified)} unverified validators, {len(verified)} verified validators and {len(deposited)} active validators ")
-    exit()
     if len(verified) > 0:
         print("Doing activating keys transaction")
         for key in verified:
