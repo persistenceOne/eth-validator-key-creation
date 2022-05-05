@@ -30,6 +30,7 @@ eth2 liquid staking.
 ```
   python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -n <NUMBER_OF_VALIDATORS>
 ```
+- For more help just pass -h flag `python3 node_operator.py -h`
 
 ### Activating all verified keys
 activate.py

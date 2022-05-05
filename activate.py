@@ -5,20 +5,19 @@ from web3 import Web3
 import argparse
 
 
-class Keysmanager:
+class KeysManager:
     url = None
     validators = None
 
     def __init__(self, url):
         self.url = url
 
-    def get_validators(self, time, address):
+    def get_validators(self, skip_entries, address):
         query = """ {
             validators(
                 first: 1000
-                where: {timestamp_gt: "time_start", nodeOperator: "address"}
-                orderBy: timestamp
-                orderDirection: asc
+                where: {nodeOperator: "address"}
+                skip: entry_count
             ) {
                 nodeOperator
                 id
@@ -28,7 +27,7 @@ class Keysmanager:
                 timestamp
                 }
             }
-          """.replace("time_start", str(time)).replace("address", address)
+          """.replace("entry_count", str(skip_entries)).replace("address", address)
         response = requests.post(self.url, json={'query': query})
         return response.json()
 
@@ -38,10 +37,12 @@ class Keysmanager:
         """
         validators = []
         keys_monitor = self.get_validators(0, address)['data']['validators']
+        skip = 0
         while True:
             validators = validators + keys_monitor
+            skip += 1000
             if len(keys_monitor) == 1000:
-                keys_monitor = self.get_validators(keys_monitor[1000]["timestamp"], address)['data']['validators']
+                keys_monitor = self.get_validators(skip, address)['data']['validators']
             else:
                 break
         return validators
@@ -90,7 +91,7 @@ def main(eth1_endpoint, graph_endpoint, private_key, contract_address, contract_
         a = json.load(file)
     issuer = Issuer(a['abi'], contract_address, eth1_endpoint)
     issuer.set_account(private_key)
-    subgraph = Keysmanager(graph_endpoint)
+    subgraph = KeysManager(graph_endpoint)
     validators = subgraph.get_pubkeys(issuer.account.address)
     del issuer
     verified = []
