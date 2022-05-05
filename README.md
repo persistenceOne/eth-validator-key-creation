@@ -28,8 +28,9 @@ eth2 liquid staking.
   - KEYSTORE_PASSWORD: password for the keys generated
   - NUMBER_OF_VALIDATORS: number of validators you want to create
 ```
-  python3 node_operator.py <ETH1_ENDPOINT> <PRIVATE_KEY> <KEYSTORE_PASSWORD> <NUMBER_OF_VALIDATORS>
+  python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -n <NUMBER_OF_VALIDATORS>
 ```
+- For more help just pass -h flag `python3 node_operator.py -h`
 
 ### Activating all verified keys
 activate.py

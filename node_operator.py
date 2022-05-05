@@ -1,3 +1,4 @@
+import argparse
 import sys
 import time
 
@@ -17,26 +18,14 @@ from eth2deposit.utils.constants import WORD_LISTS_PATH, MAX_DEPOSIT_AMOUNT
 from eth2deposit.settings import get_chain_setting, MAINNET, PRATER
 from eth2deposit.utils.validation import verify_deposit_data_json
 
-web3_eth = Web3(Web3.HTTPProvider(sys.argv[1]))
-web3_eth.isConnected()
-web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
-account = web3_eth.eth.account.privateKeyToAccount(sys.argv[2])
-web3_eth.eth.account.enable_unaudited_hdwallet_features()
 
-KeysManager = "0xd7C8052A5db95BBA40F3AE3882E6127A068BAeF9"
-with open("contracts/keysmanager.json", 'r') as file:
-    a = file.read()
-keysmanager_contract = web3_eth.eth.contract(abi=a, address=Web3.toChecksumAddress(KeysManager))
-with open("contracts/deposit_contract.json", 'r') as file:
-    abi = file.read()
-depositcontract = web3_eth.eth.contract(abi=abi, address=Web3.toChecksumAddress("0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b"))
-mnemonic = get_mnemonic(language='english', words_path=WORD_LISTS_PATH)
-
-num_validator = int(sys.argv[4])
-keystore_password = sys.argv[3]
-print(keystore_password)
-
-
+def connect_to_eth(eth_endpoint, private_key):
+    web3_eth = Web3(Web3.HTTPProvider(eth_endpoint))
+    web3_eth.isConnected()
+    web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
+    account = web3_eth.eth.account.privateKeyToAccount(private_key)
+    web3_eth.eth.account.enable_unaudited_hdwallet_features()
+    return web3_eth, account
 def generate_keys(mnemonic, validator_start_index: int,
                   num_validators: int, folder: str, chain: str, keystore_password: str,
                   eth1_withdrawal_address: HexAddress):
@@ -64,7 +53,8 @@ def generate_keys(mnemonic, validator_start_index: int,
         raise ValidationError("Failed to verify the deposit data JSON files.")
     return credentials
 
-def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes, withdraw_credenttials: bytes,
+def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes,
+                                             withdraw_credenttials: bytes,
                                              amount: int = 31000000000):
     deposit_data = DepositMessage(
         pubkey=public_key,
@@ -76,7 +66,7 @@ def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes
     signature = bls.Sign(private_key, signing_root)
     return signature.hex()
 
-def submit_key(signature, publkey):
+def submit_key(web3_eth, account, keysmanager_contract, signature, publkey):
     tx = keysmanager_contract.functions.addValidator(publkey,
                                                      signature,
                                                      account.address).buildTransaction(
@@ -93,8 +83,8 @@ def submit_key(signature, publkey):
     else:
         print('TX reverted')
 
-
-def deposit_to_eth2_contract(pubkey, withdrawal_credentials, signature, deposit_data_root):
+def deposit_to_eth2_contract(web3_eth, account, depositcontract, pubkey, withdrawal_credentials, signature,
+                             deposit_data_root):
     tx = depositcontract.functions.deposit(
         pubkey, withdrawal_credentials, signature, deposit_data_root).buildTransaction(
         {'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 100000,
@@ -111,17 +101,70 @@ def deposit_to_eth2_contract(pubkey, withdrawal_credentials, signature, deposit_
     else:
         print('TX reverted')
 
-credentials = generate_keys(mnemonic=mnemonic, validator_start_index=0, num_validators=num_validator, folder="",
-                            chain=PRATER,
-                            keystore_password=keystore_password,
-                            eth1_withdrawal_address=HexAddress(HexStr("0x8E35f095545c56b07c942A4f3B055Ef1eC4CB148")))
 
-for credential in credentials.credentials:
-    deposit = credential.deposit_datum_dict
-    print(deposit)
-    deposit_to_eth2_contract(deposit['pubkey'].hex(), deposit['withdrawal_credentials'].hex(),
-                             deposit['signature'].hex(),
-                             deposit['deposit_data_root'].hex())
-    signature_new = generate_deposit_signature_from_priv_key(credential.signing_sk, credential.signing_pk,
-                                                             credential.withdrawal_credentials)
-    submit_key(signature_new, deposit['pubkey'].hex())
+def main(args):
+    web3_eth, account = connect_to_eth(args.ethereum_endpoint, args.private_key)
+    with open(args.keysmanager_contract_abi, 'r') as file:
+        a = file.read()
+    keysmanager_contract = web3_eth.eth.contract(abi=a,
+                                                 address=Web3.toChecksumAddress(args.keysmanager_contract_address))
+    with open(args.deposit_contract_abi, 'r') as file:
+        abi = file.read()
+    depositcontract = web3_eth.eth.contract(abi=abi,
+                                            address=Web3.toChecksumAddress(args.deposit_contract_address))
+    mnemonic = get_mnemonic(language='english', words_path=WORD_LISTS_PATH)
+    del web3_eth,account
+    num_validator = int(args.number_of_keys)
+    keystore_password = args.keystore_password
+    print(
+        f"mnemonic for generation of keys from index 0 to {num_validator-1} : \n\n {mnemonic} \n\n Please write it down and save it. \n Keystore password: {keystore_password}")
+
+    credentials = generate_keys(mnemonic=mnemonic, validator_start_index=0, num_validators=num_validator,
+                                             folder="",
+                                             chain=PRATER,
+                                             keystore_password=keystore_password,
+                                             eth1_withdrawal_address=HexAddress(
+                                                 HexStr("0x8E35f095545c56b07c942A4f3B055Ef1eC4CB148")))
+
+    for credential in credentials.credentials:
+        web3_eth, account = connect_to_eth(args.ethereum_endpoint, args.private_key)
+        deposit = credential.deposit_datum_dict
+        print(deposit)
+        deposit_to_eth2_contract(web3_eth, account, depositcontract, deposit['pubkey'].hex(),
+                                              deposit['withdrawal_credentials'].hex(),
+                                              deposit['signature'].hex(),
+                                              deposit['deposit_data_root'].hex())
+        signature_new = generate_deposit_signature_from_priv_key(credential.signing_sk,
+                                                                              credential.signing_pk,
+                                                                              credential.withdrawal_credentials)
+        submit_key(web3_eth, account, keysmanager_contract, signature_new, deposit['pubkey'].hex())
+        del web3_eth, account
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser("Keys generation script for node operators")
+    required = parser.add_argument_group("required arguments")
+    required.add_argument("-eth1", "--ethereum-endpoint",
+                          help="either a websocket or http endpoint(Eg:http://127.0.0.1:8545)",
+                          required=True)
+    required.add_argument("-priv", "--private-key",
+                          help="private key associated with the account whitelisted with pstake stketh to make the transaction",
+                          required=True)
+    required.add_argument("-pass", "--keystore-password",
+                          help="keystore password for validator public keys",
+                          required=True)
+    required.add_argument("-n", "--number-of-keys",
+                          help="Number of keys to create for submitting to the contract",
+                          required=True)
+    parser.add_argument("-dc", "--deposit-contract-address", help="contract address to make the transaction to",
+                        default="0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b")
+    parser.add_argument("-dabi", "--deposit-contract-abi",
+                        help="telegram channel id bot is subscribed to for sending error",
+                        default="contracts/deposit_contract.json")
+    parser.add_argument("-kc", "--keysmanager-contract-address", help="contract address to make the transaction to",
+                        default="0xd7C8052A5db95BBA40F3AE3882E6127A068BAeF9")
+    parser.add_argument("-kabi", "--keysmanager-contract-abi",
+                        help="telegram channel id bot is subscribed to for sending error",
+                        default="contracts/keysmanager.json")
+    args = parser.parse_args()
+    main(args)
