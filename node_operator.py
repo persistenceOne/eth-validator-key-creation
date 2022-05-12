@@ -26,6 +26,8 @@ def connect_to_eth(eth_endpoint, private_key):
     account = web3_eth.eth.account.privateKeyToAccount(private_key)
     web3_eth.eth.account.enable_unaudited_hdwallet_features()
     return web3_eth, account
+
+
 def generate_keys(mnemonic, validator_start_index: int,
                   num_validators: int, folder: str, chain: str, keystore_password: str,
                   eth1_withdrawal_address: HexAddress):
@@ -53,6 +55,7 @@ def generate_keys(mnemonic, validator_start_index: int,
         raise ValidationError("Failed to verify the deposit data JSON files.")
     return credentials
 
+
 def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes,
                                              withdraw_credenttials: bytes,
                                              amount: int = 31000000000):
@@ -66,14 +69,15 @@ def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes
     signature = bls.Sign(private_key, signing_root)
     return signature.hex()
 
-def submit_key(web3_eth, account, keysmanager_contract, signature, publkey):
+
+def submit_key(web3_eth, account, keysmanager_contract, signature, publkey, nonce):
     tx = keysmanager_contract.functions.addValidator(publkey,
                                                      signature,
                                                      account.address).buildTransaction(
         ({'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 1000000}))
     print(tx)
     web3_eth.eth.call(tx)
-    tx['nonce'] = web3_eth.eth.get_transaction_count(account.address)
+    tx['nonce'] = nonce
     signed_tx = web3_eth.eth.account.sign_transaction(tx, account.key)
     tx_hash = web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
     tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash)
@@ -83,15 +87,16 @@ def submit_key(web3_eth, account, keysmanager_contract, signature, publkey):
     else:
         print('TX reverted')
 
+
 def deposit_to_eth2_contract(web3_eth, account, depositcontract, pubkey, withdrawal_credentials, signature,
-                             deposit_data_root):
+                             deposit_data_root, nonce):
     tx = depositcontract.functions.deposit(
         pubkey, withdrawal_credentials, signature, deposit_data_root).buildTransaction(
         {'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 100000,
          "value": web3_eth.toWei(1, "ether")})
     print(tx)
     web3_eth.eth.call(tx)
-    tx['nonce'] = web3_eth.eth.get_transaction_count(account.address)
+    tx['nonce'] = nonce
     signed_tx = web3_eth.eth.account.sign_transaction(tx, account.key)
     tx_hash = web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
     tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash)
@@ -113,31 +118,34 @@ def main(args):
     depositcontract = web3_eth.eth.contract(abi=abi,
                                             address=Web3.toChecksumAddress(args.deposit_contract_address))
     mnemonic = get_mnemonic(language='english', words_path=WORD_LISTS_PATH)
-    del web3_eth,account
+    current_nonce = web3_eth.eth.get_transaction_count(account.address)
+    del web3_eth, account
     num_validator = int(args.number_of_keys)
     keystore_password = args.keystore_password
     print(
-        f"mnemonic for generation of keys from index 0 to {num_validator-1} : \n\n {mnemonic} \n\n Please write it down and save it. \n Keystore password: {keystore_password}")
+        f"mnemonic for generation of keys from index 0 to {num_validator - 1} : \n\n {mnemonic} \n\n Please write it down and save it. \n Keystore password: {keystore_password}")
 
     credentials = generate_keys(mnemonic=mnemonic, validator_start_index=0, num_validators=num_validator,
-                                             folder="",
-                                             chain=PRATER,
-                                             keystore_password=keystore_password,
-                                             eth1_withdrawal_address=HexAddress(
-                                                 HexStr("0x8E35f095545c56b07c942A4f3B055Ef1eC4CB148")))
+                                folder="",
+                                chain=PRATER,
+                                keystore_password=keystore_password,
+                                eth1_withdrawal_address=HexAddress(
+                                    HexStr("0x8E35f095545c56b07c942A4f3B055Ef1eC4CB148")))
 
     for credential in credentials.credentials:
         web3_eth, account = connect_to_eth(args.ethereum_endpoint, args.private_key)
         deposit = credential.deposit_datum_dict
         print(deposit)
         deposit_to_eth2_contract(web3_eth, account, depositcontract, deposit['pubkey'].hex(),
-                                              deposit['withdrawal_credentials'].hex(),
-                                              deposit['signature'].hex(),
-                                              deposit['deposit_data_root'].hex())
+                                 deposit['withdrawal_credentials'].hex(),
+                                 deposit['signature'].hex(),
+                                 deposit['deposit_data_root'].hex(), current_nonce)
+        current_nonce += 1
         signature_new = generate_deposit_signature_from_priv_key(credential.signing_sk,
-                                                                              credential.signing_pk,
-                                                                              credential.withdrawal_credentials)
-        submit_key(web3_eth, account, keysmanager_contract, signature_new, deposit['pubkey'].hex())
+                                                                 credential.signing_pk,
+                                                                 credential.withdrawal_credentials)
+        submit_key(web3_eth, account, keysmanager_contract, signature_new, deposit['pubkey'].hex(), current_nonce)
+        current_nonce += 1
         del web3_eth, account
 
 
