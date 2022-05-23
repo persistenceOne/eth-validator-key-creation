@@ -165,12 +165,12 @@ if __name__ == '__main__':
                           help="Number of keys to create for submitting to the contract",
                           required=True)
     parser.add_argument("-dc", "--deposit-contract-address", help="contract address to make the transaction to",
-                        default="0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b")
+                        default="0x00000000219ab540356cBB839Cbe05303d7705Fa")
     parser.add_argument("-dabi", "--deposit-contract-abi",
                         help="telegram channel id bot is subscribed to for sending error",
                         default="contracts/deposit_contract.json")
     parser.add_argument("-kc", "--keysmanager-contract-address", help="contract address to make the transaction to",
-                        default="0xd7C8052A5db95BBA40F3AE3882E6127A068BAeF9")
+                        default="0xD90BA04ada98b08105Eab75899dbf9cb9f2910C2")
     parser.add_argument("-kabi", "--keysmanager-contract-abi",
                         help="telegram channel id bot is subscribed to for sending error",
                         default="contracts/keysmanager.json")
