@@ -130,7 +130,7 @@ def main(args):
                                 chain=PRATER,
                                 keystore_password=keystore_password,
                                 eth1_withdrawal_address=HexAddress(
-                                    HexStr("0x8E35f095545c56b07c942A4f3B055Ef1eC4CB148")))
+                                    HexStr("0x5945bfe76789c79f54C634f6f704d5400491C90a")))
 
     for credential in credentials.credentials:
         web3_eth, account = connect_to_eth(args.ethereum_endpoint, args.private_key)
