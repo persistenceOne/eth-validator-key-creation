@@ -137,7 +137,7 @@ if __name__ == '__main__':
                           help="private key associated with the account whitelisted with pstake stketh to make the transaction",
                           required=True)
     parser.add_argument("-contract", "--contract-address", help="contract address to make the transaction to",
-                        default="0xC98a8aE7c5D009410543977a6f9CB4921741a03e")
+                        default="0xB9599ecb958623614F94BcD9b03f9Ab161Eb05D0")
     parser.add_argument("-abi", "--contract-abi", help="telegram channel id bot is subscribed to for sending error",
                         default="contracts/Issuer.json")
     args = parser.parse_args()
