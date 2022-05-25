@@ -127,7 +127,7 @@ def main(args):
 
     credentials = generate_keys(mnemonic=mnemonic, validator_start_index=0, num_validators=num_validator,
                                 folder="",
-                                chain=PRATER,
+                                chain=MAINNET,
                                 keystore_password=keystore_password,
                                 eth1_withdrawal_address=HexAddress(
                                     HexStr("0x5945bfe76789c79f54C634f6f704d5400491C90a")))
