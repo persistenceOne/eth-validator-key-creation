@@ -64,7 +64,7 @@ def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes
         withdrawal_credentials=withdraw_credenttials,
         amount=amount,
     )
-    domain = compute_deposit_domain(fork_version=get_chain_setting(PRATER).GENESIS_FORK_VERSION)
+    domain = compute_deposit_domain(fork_version=get_chain_setting(MAINNET).GENESIS_FORK_VERSION)
     signing_root = compute_signing_root(deposit_data, domain)
     signature = bls.Sign(private_key, signing_root)
     return signature.hex()
@@ -135,11 +135,11 @@ def main(args):
     for credential in credentials.credentials:
         web3_eth, account = connect_to_eth(args.ethereum_endpoint, args.private_key)
         deposit = credential.deposit_datum_dict
-        print(deposit)
         deposit_to_eth2_contract(web3_eth, account, depositcontract, deposit['pubkey'].hex(),
                                  deposit['withdrawal_credentials'].hex(),
                                  deposit['signature'].hex(),
                                  deposit['deposit_data_root'].hex(), current_nonce)
+
         current_nonce += 1
         signature_new = generate_deposit_signature_from_priv_key(credential.signing_sk,
                                                                  credential.signing_pk,
