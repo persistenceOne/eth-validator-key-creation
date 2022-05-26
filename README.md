@@ -23,10 +23,11 @@ node_operator.py
 eth2 liquid staking.
 - The keys can be found in node_operator folder which will be created while running the script
 - Params to pass:
-  - ETH1_ENDPOINT: endpoint to connect to eth1 chain
-  - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
-  - KEYSTORE_PASSWORD: password for the keys generated
-  - NUMBER_OF_VALIDATORS: number of validators you want to create
+  - Required:
+    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
+    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
+    - KEYSTORE_PASSWORD: password for the keys generated
+    - NUMBER_OF_VALIDATORS: number of validators you want to create
 ```
   python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -n <NUMBER_OF_VALIDATORS>
 ```
@@ -45,3 +46,17 @@ and issue you a refund
   python3 activate.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -graph <SUBGRAPH_ENDPOINT>
 ```
 - For more help just pass -h flag `python3 activate.py -h`
+
+### Activating all verified keys [!! TO BE USED ONLY IN CASE OF NODE OPERATOR SCRIPT CRASHING]
+generate_signature_and_submit.py
+- This script will generate a signature for private key and submit it to pstake keysmanager smart contract
+- Params to pass:
+  - Required:
+    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
+    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
+    - KEYSTORE_PASSWORD: password for the keys generated
+    - KEYSTORE_1.json,KEYSTORE_2.json: space separated keystore files for which the transaction failed and signature has to be submitted
+```
+  python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -keys <KEYSTORE_1.json> <KEYSTORE_2.json>
+```
+- For more help just pass -h flag `python3 generate_signature_and_submit.py -h`
