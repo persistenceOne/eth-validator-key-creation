@@ -72,7 +72,6 @@ def submit_key(web3_eth, account, keysmanager_contract, signature, publkey, nonc
     tx['nonce'] = nonce
     tx['gas'] = web3_eth.eth.estimate_gas(tx)
     tx['gasPrice'] = int(1.5*web3_eth.eth.generate_gas_price(tx))
-    exit()
     signed_tx = web3_eth.eth.account.sign_transaction(tx, account.key)
     tx_hash = web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
     tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash, timeout=300)

@@ -47,7 +47,7 @@ and issue you a refund
 ```
 - For more help just pass -h flag `python3 activate.py -h`
 
-### Activating all verified keys [!! TO BE USED ONLY IN CASE OF NODE OPERATOR SCRIPT CRASHING]
+### Generate signature for failed keys [!! TO BE USED ONLY IN CASE OF NODE OPERATOR SCRIPT CRASHING]
 generate_signature_and_submit.py
 - This script will generate a signature for private key and submit it to pstake keysmanager smart contract
 - Params to pass:
