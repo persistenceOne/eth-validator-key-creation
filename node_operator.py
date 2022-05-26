@@ -1,14 +1,10 @@
 import argparse
-import sys
-import time
 
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from py_ecc.bls import G2ProofOfPossession as bls
-from eth2deposit.key_handling.keystore import Keystore
 from eth2deposit.utils.ssz import DepositMessage, compute_signing_root, compute_deposit_domain, DepositData
 import os
-from typing import List, Tuple
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 
 from eth_typing import HexAddress, HexStr
 from eth2deposit.credentials import CredentialList
@@ -22,7 +18,13 @@ from eth2deposit.utils.validation import verify_deposit_data_json
 def connect_to_eth(eth_endpoint, private_key):
     web3_eth = Web3(Web3.HTTPProvider(eth_endpoint))
     web3_eth.isConnected()
-    web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
+    # web3_eth.middleware_onion.inject(geth_poa_middleware, layer=0)
+    # gas_strategy = construct_time_based_gas_price_strategy(120, sample_size=120, probability=98, weighted=False)
+    web3_eth.eth.set_gas_price_strategy(rpc_gas_price_strategy)
+    # for time based gas price strategy
+    # web3_eth.middleware_onion.add(middleware.time_based_cache_middleware)
+    # web3_eth.middleware_onion.add(middleware.latest_block_based_cache_middleware)
+    # web3_eth.middleware_onion.add(middleware.simple_cache_middleware)
     account = web3_eth.eth.account.privateKeyToAccount(private_key)
     web3_eth.eth.account.enable_unaudited_hdwallet_features()
     return web3_eth, account
@@ -74,13 +76,15 @@ def submit_key(web3_eth, account, keysmanager_contract, signature, publkey, nonc
     tx = keysmanager_contract.functions.addValidator(publkey,
                                                      signature,
                                                      account.address).buildTransaction(
-        ({'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 1000000}))
+        ({'from': account.address}))
     print(tx)
     web3_eth.eth.call(tx)
     tx['nonce'] = nonce
+    tx['gas'] = web3_eth.eth.estimate_gas(tx)
+    tx['gasPrice'] = web3_eth.eth.generate_gas_price(tx)
     signed_tx = web3_eth.eth.account.sign_transaction(tx, account.key)
     tx_hash = web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
-    tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash)
+    tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash,timeout=300)
     print(tx_receipt)
     if tx_receipt.status == 1:
         print('TX successful')
@@ -92,14 +96,15 @@ def deposit_to_eth2_contract(web3_eth, account, depositcontract, pubkey, withdra
                              deposit_data_root, nonce):
     tx = depositcontract.functions.deposit(
         pubkey, withdrawal_credentials, signature, deposit_data_root).buildTransaction(
-        {'from': account.address, 'gasPrice': web3_eth.toWei('2', 'gwei'), 'gas': 100000,
-         "value": web3_eth.toWei(1, "ether")})
+        {'from': account.address,"value": web3_eth.toWei(1, "ether")})
     print(tx)
     web3_eth.eth.call(tx)
     tx['nonce'] = nonce
+    tx['gas'] = web3_eth.eth.estimate_gas(tx)
+    tx['gasPrice'] = web3_eth.eth.generate_gas_price(tx)
     signed_tx = web3_eth.eth.account.sign_transaction(tx, account.key)
     tx_hash = web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
-    tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash)
+    tx_receipt = web3_eth.eth.wait_for_transaction_receipt(tx_hash,timeout=300)
     print(tx_receipt)
     if tx_receipt.status == 1:
         print('TX successful')
