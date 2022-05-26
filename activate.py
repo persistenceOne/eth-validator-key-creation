@@ -2,6 +2,7 @@ import json
 import sys
 import requests
 from web3 import Web3
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 import argparse
 
 
@@ -55,6 +56,7 @@ class Issuer:
 
     def __init__(self, contract_abi, contract_address, eth_rpc):
         self.web3_eth = Web3(Web3.HTTPProvider(eth_rpc))
+        self.web3_eth.eth.set_gas_price_strategy(rpc_gas_price_strategy)
         self.issuer_contract = self.web3_eth.eth.contract(abi=contract_abi,
                                                           address=Web3.toChecksumAddress(contract_address))
 
@@ -68,7 +70,7 @@ class Issuer:
         if self.account is None:
             raise ValueError("set account before performing this action")
         return self.issuer_contract.functions.depositToEth2(ley).buildTransaction(
-            {'from': self.account.address, 'gasPrice': self.web3_eth.toWei('2', 'gwei'), 'gas': 1000000})
+            {'from': self.account.address})
 
     def do_transaction(self, tx):
 
@@ -76,9 +78,11 @@ class Issuer:
         print("=========================result==========================================")
         print(result)
         tx['nonce'] = self.web3_eth.eth.get_transaction_count(self.account.address)
+        tx['gas'] = self.web3_eth.eth.estimate_gas(tx)
+        tx['gasPrice'] = self.web3_eth.eth.generate_gas_price(tx)
         signed_tx = self.web3_eth.eth.account.sign_transaction(tx, self.account.key)
         tx_hash = self.web3_eth.eth.send_raw_transaction(signed_tx.rawTransaction)
-        tx_receipt = self.web3_eth.eth.wait_for_transaction_receipt(tx_hash)
+        tx_receipt = self.web3_eth.eth.wait_for_transaction_receipt(tx_hash,timeout=300)
         print(tx_receipt)
         if tx_receipt.status == 1:
             print('TX successful')
