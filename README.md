@@ -57,6 +57,6 @@ generate_signature_and_submit.py
     - KEYSTORE_PASSWORD: password for the keys generated
     - KEYSTORE_1.json,KEYSTORE_2.json: space separated keystore files for which the transaction failed and signature has to be submitted
 ```
-  python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -keys <KEYSTORE_1.json> <KEYSTORE_2.json>
+  python3 generate_signature_and_submit.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -keys <KEYSTORE_1.json> <KEYSTORE_2.json>
 ```
 - For more help just pass -h flag `python3 generate_signature_and_submit.py -h`
