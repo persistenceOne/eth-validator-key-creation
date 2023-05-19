@@ -27,6 +27,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+validator_keys
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -137,3 +139,4 @@ node_operator
 node_operator_2
 node_operator_3
 eth2deposit/test*
+config.json
