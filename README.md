@@ -4,59 +4,68 @@ which can be used to create keys and signature with variable eth amount for the 
 pstake smart contracts and on deposit contract.
 
 - Install the requirements from requirements.txt or create a virtual env.
-- For installing requirements `python3 -m pip install -r requirements.txt`
+- For installing requirements `python -m pip install -r requirements.txt`
 
-### Creating genesis keys [!! DONT RUN THIS FOR TESTNET KEY SUBMISSION]
-genesis.py
-- For making deposit for genesis event to happen. Used for imitating the genesis of beacon chain locally
-  - Run with the following params:
-    - PRIVATE_KEY: private key for eth1 account 
-    - DEPOSIT_CONTRACT_ADDRESS: Deposit contract which is used by beacon node
-    - KEYSTORE_PASSWORD: Password to encrypt the validator private keystore file
-```
-  python3 genesis.py <PRIVATE_KEY> <DEPOSIT_CONTRACT_ADDRESS> <KEYSTORE_PASSWORD>
-```
+For running the script you can run the following script:
+- `python node_operator.py --help` \
+There are two options that'll be shown to you:
+- **start**: This will start the script for the pSTAKE protocol.
+- **generate**: This option you can use generate validator keys for Ethereum. The deposit data which is generated
+is for deposit of 32 ETH.
+- There is a global option as well:
+  - -t (TESTNET): It takes boolean values as input. The default value if not selected is False. If you are participating
+    on Goerli testnet you can set it to True
 
-### Deposit validator keys to Keysmanager contract by Node Operator
-node_operator.py
-- This script will create keys and submit them on deposit contract as well as pstake keysmanager contract for 
-eth2 liquid staking.
-- The keys can be found in node_operator folder which will be created while running the script
-- Params to pass:
-  - Required:
-    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
-    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
-    - KEYSTORE_PASSWORD: password for the keys generated
-    - NUMBER_OF_VALIDATORS: number of validators you want to create
-```
-  python3 node_operator.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -n <NUMBER_OF_VALIDATORS>
-```
-- For more help just pass -h flag `python3 node_operator.py -h`
+## Running the scripts (start)
+This script performs the following actions:
+1. It generates validator keys to be used for pSTAKE protocol
+2. It generates deposit data and submit the keys to deposit contract with 1 ETH deposit
+3. It generates a signature with the validator key for rest of 31 ETH that needs to be deposited and submits it to the  
+  pSTAKE contract, which uses the same signature to make the remaining deposit
+4. It also monitors the issuer contract for balance, so that it can make a transaction to activate the keys. \
+5. The script also tracks the number of keys that you have deposited and maintain a balance of keys automatically that 
+  needs to be present in the contract. A node operator just have to keep 3-4 eth balance with the account that they 
+  submitted to pSTAKE protocol for whitelisting.
+6. It generates a *stateFile.json* which store the current state of the system,i.e., validator keys the script is
+  generating. If the script fails you can restart it again. It'll look into statefile to see if some keys was not 
+  submitted and continue from there. **DO NOT DELETE THIS FILE!!**
 
-### Activating all verified keys
-activate.py
-- This script will do a transaction to pstake stketh smart contract to make your verified key active 
-and issue you a refund
-- Params to pass:
-  - Required:
-    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
-    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
-    - SUBGRAPH_ENDPOINT: endpoint to connect to pstake stketh subgraph
+For help on running the script you can pass the following options:\
 ```
-  python3 activate.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -graph <SUBGRAPH_ENDPOINT>
+python node_operator.py start --help
 ```
-- For more help just pass -h flag `python3 activate.py -h`
+It will give you following options apart from the global options:
+- -c (CONFIG): Pass the path of the configuration file you wish to use. Copy paste the example config(`cp config.example.json config.json `) and fill in the 
+details. 
+- -priv (PRIVATE_KEY): Private key for the address whitelisted with pSTAKE.\
+#### OPTIONAL:
+```
+NOTE: ADVANCED USAGE BE CAREFUL WITH THE BELOW OPTIONS. IF MISCONFIGURED THE VALIDATOR CAN GET SLASHED FOR DOUBLE 
+SIGNING!! THIS CAN HAPPEN WHEN YOU USE THE SAME MNEMONIC AND SAME INDEX. ONLY USE WHEN YOU ARE CONFIDENT ENOUGH!!
+```
+- -m (MNEMONIC): Mnemonic used to generate the validator keys. **IT IS NOT YOUR ACCOUNT MNEMONIC!!!**
+  If nothing is passed it'll generate a new mnemonic and display it on the console. Note it down if you want to use it
+  for all validator key creation.
+- -i (INDEX): Index of validator to start with. Use this only when you are using your own mnemonic and keep track of
+  last index used. You can find that on the console when running the script in the logs. 
 
-### Generate signature for failed keys [!! TO BE USED ONLY IN CASE OF NODE OPERATOR SCRIPT CRASHING]
-generate_signature_and_submit.py
-- This script will generate a signature for private key and submit it to pstake keysmanager smart contract
-- Params to pass:
-  - Required:
-    - ETH1_ENDPOINT: endpoint to connect to eth1 chain
-    - PRIVATE_KEY: private key for the node operator account for which you submitted your address to pstake
-    - KEYSTORE_PASSWORD: password for the keys generated
-    - KEYSTORE_1.json,KEYSTORE_2.json: space separated keystore files for which the transaction failed and signature has to be submitted
+To run the script:
 ```
-  python3 generate_signature_and_submit.py -eth1 <ETH1_ENDPOINT> -priv <PRIVATE_KEY> -pass <KEYSTORE_PASSWORD> -keys <KEYSTORE_1.json> <KEYSTORE_2.json>
+python node_operator.py start -c <CONFIG_FILE> -priv <PRIVATE_KEY> -m <MNEMONIC_VALIDATOR_KEYS>
 ```
-- For more help just pass -h flag `python3 generate_signature_and_submit.py -h`
+## Creating keys (generate)
+If you want to just generate staking keys for personal use case you can do that as well. \
+For help on running the script you can pass the following options:
+```
+python node_operator.py generate --help
+```
+It will give you following options apart from the global options:
+- -w (WITHDRAWAL): Withdrawal address to set for validator keys
+- -n (NUMBER): Number of validators to create
+- -p (PASSPHRASE): Passphrase for validators to use.
+#### OPTIONAL:
+- -m (MNEMONIC): Mnemonic used to generate the validator keys.If nothing is passed it'll generate a new mnemonic and
+  display it on the console. Note it down if you want to use it for all validator key creation.
+- -i (INDEX): Index of validator to start with. Use this only when you are using your own mnemonic and keep track of
+  last index used.
+

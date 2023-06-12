@@ -1,0 +1,11 @@
+{
+  "contracts": {
+    "issuer": "",
+    "keysManager": "",
+    "deposit": "",
+    "withdrawal_address": ""
+  },
+  "eth_endpoint": "",
+  "subgraph_endpoint": "",
+  "validator_key_passphrase": ""
+}
