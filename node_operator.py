@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 import traceback
 
 from web3 import Web3
@@ -32,13 +33,13 @@ def generate_keys(args):
     if args.testnet:
         keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index), int(args.number), "",
                                                           GOERLI,
-                                                          args.passphrase, Web3.to_checksum_address(args.withdrawal),
+                                                          args.passphrase, Web3.toChecksumAddress(args.withdrawal),
                                                           MAX_DEPOSIT_AMOUNT)
     else:
         keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index), int(args.number), "",
                                                           MAINNET,
                                                           args.passphrase,
-                                                          Web3.to_checksum_address(args.withdrawal),
+                                                          Web3.toChecksumAddress(args.withdrawal),
                                                           MAX_DEPOSIT_AMOUNT)
 
     print("====================")
@@ -96,14 +97,14 @@ def start_staking(args):
                     keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
                                                                       2, "", GOERLI,
                                                                       config.validator_key_passphrase,
-                                                                      Web3.to_checksum_address(
+                                                                      Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
                                                                       MIN_DEPOSIT_AMOUNT)
                 else:
                     keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
                                                                       2, "", MAINNET,
                                                                       config.validator_key_passphrase,
-                                                                      Web3.to_checksum_address(
+                                                                      Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
                                                                       MIN_DEPOSIT_AMOUNT)
                 print("making deposit to deposit contract and pSTAKE contract")
@@ -124,9 +125,14 @@ def start_staking(args):
                     priv_key = int.from_bytes(secret.decrypt(config.validator_key_passphrase), 'big')
                     pubkey = bytes(bytearray.fromhex(secret.pubkey))
                     withdrawal_credentials = bytes(bytearray.fromhex(cred.withdrawal_credentials))
-                    signature = Helpers.generate_deposit_signature_from_priv_key(priv_key,
-                                                                                 pubkey,
-                                                                                 withdrawal_credentials)
+                    if args.testnet:
+                        signature = Helpers.generate_deposit_signature_from_priv_key(GOERLI, priv_key,
+                                                                                     pubkey,
+                                                                                     withdrawal_credentials)
+                    else:
+                        signature = Helpers.generate_deposit_signature_from_priv_key(MAINNET, priv_key,
+                                                                                     pubkey,
+                                                                                     withdrawal_credentials)
                     tx = keys_manager_contract.add_validator("0x" + cred.pubkey, signature, eth_node.account.address)
                     eth_node.make_tx(tx)
                     print("deposited to the pSTAKE contract")
@@ -153,13 +159,15 @@ def start_staking(args):
                         signature = Helpers.generate_deposit_signature_from_priv_key(priv_key,
                                                                                      pubkey,
                                                                                      withdrawal_credentials)
-                        tx = keys_manager_contract.add_validator(Web3.to_bytes(hexstr="0x" + cred.pubkey),
-                                                                 Web3.to_bytes(hexstr="0x" + signature),
+                        tx = keys_manager_contract.add_validator(Web3.toBytes(hexstr="0x" + cred.pubkey),
+                                                                 Web3.toBytes(hexstr="0x" + signature),
                                                                  eth_node.account.address)
                         eth_node.make_tx(tx)
                         print("deposited to the pSTAKE contract")
                         del state[cred.pubkey]
                 state = {}
+            print("sleeping for 600 sec as no keys to be generated now")
+            time.sleep(600)
     except Exception as err:
         print("ERROR! SCRIPT STOPPED!!")
         print(traceback.format_exc())

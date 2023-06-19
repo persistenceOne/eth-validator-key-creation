@@ -23,7 +23,7 @@ class Helpers:
         return data
 
     @staticmethod
-    def generate_deposit_signature_from_priv_key(private_key: int, public_key: bytes,
+    def generate_deposit_signature_from_priv_key(chain: str, private_key: int, public_key: bytes,
                                                  withdraw_credenttials: bytes,
                                                  amount: int = 31000000000):
         deposit_data = DepositMessage(
@@ -31,7 +31,7 @@ class Helpers:
             withdrawal_credentials=withdraw_credenttials,
             amount=amount,
         )
-        domain = compute_deposit_domain(fork_version=get_chain_setting().GENESIS_FORK_VERSION)
+        domain = compute_deposit_domain(fork_version=get_chain_setting(chain).GENESIS_FORK_VERSION)
         signing_root = compute_signing_root(deposit_data, domain)
         signature = bls.Sign(private_key, signing_root)
         return signature.hex()
@@ -60,7 +60,7 @@ class Subgraph:
         else:
             response.raise_for_status()
 
-    def get_unverified_result(self,node_operator_address):
+    def get_unverified_result(self, node_operator_address):
         query = """{
                 validators(where:{nodeOperator:"node_operator_address",status:"UNVERIFIED"}) {
                     id
@@ -76,4 +76,3 @@ class Subgraph:
             return response.json()
         else:
             response.raise_for_status()
-
