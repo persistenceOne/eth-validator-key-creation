@@ -1,5 +1,5 @@
 from web3 import Web3
-from web3.gas_strategies.rpc import rpc_gas_price_strategy
+from web3.gas_strategies.time_based import fast_gas_price_strategy
 import web3
 
 
@@ -10,7 +10,7 @@ class EthNode:
 
     def __init__(self, rpc_url, private_key):
         self.eth_node = Web3(Web3.HTTPProvider(rpc_url))
-        self.eth_node.eth.set_gas_price_strategy(rpc_gas_price_strategy)
+        self.eth_node.eth.set_gas_price_strategy(fast_gas_price_strategy)
         self.account = self.eth_node.eth.account.from_key(
             private_key)
 

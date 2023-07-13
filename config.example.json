@@ -7,5 +7,6 @@
   },
   "eth_endpoint": "",
   "subgraph_endpoint": "",
-  "validator_key_passphrase": ""
+  "validator_key_passphrase": "",
+  "validator_count": 0
 }
