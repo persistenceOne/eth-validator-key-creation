@@ -1,6 +1,6 @@
 IMAGE_NAME=persistenceone/node-operator
 TAG_NAME := $(shell date '+%Y%m%d')-$(shell git rev-parse --short HEAD)
-CONTAINER_NAME=oracle-container
+CONTAINER_NAME=pSTAKE-container
 FILE=Dockerfile
 
 DOCKER_VOLUME=\
