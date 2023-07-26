@@ -53,6 +53,14 @@ To run the script:
 ```
 python node_operator.py start -c <CONFIG_FILE> -priv <PRIVATE_KEY> -m <MNEMONIC_VALIDATOR_KEYS>
 ```
+
+### Docker 
+You can also use the following docker image: `persistenceone/node-operator:latest`
+- To use the image mount a volume with the config file and run:
+  - TESTNET(BOOLEAN): Whether running on testnet(true/false)
+```
+docker run -v <config_file_folder>:/config -it persistenceone/node-operator:latest python node_operator.py start -c /config/config.json -priv <PRIVATE_KEY> -t <TESTNET>
+```
 ## Creating keys (generate)
 If you want to just generate staking keys for personal use case you can do that as well. \
 For help on running the script you can pass the following options:
