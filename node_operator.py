@@ -95,14 +95,14 @@ def start_staking(args):
                     print("No index was supplied. Taking 0 as a validator starting index")
                 if args.testnet:
                     keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
-                                                                      config.validator_count, "", GOERLI,
+                                                                      config.validator_count, args.key_folder, GOERLI,
                                                                       config.validator_key_passphrase,
                                                                       Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
                                                                       MIN_DEPOSIT_AMOUNT)
                 else:
                     keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
-                                                                      config.validator_count, "", MAINNET,
+                                                                      config.validator_count, args.key_folder, MAINNET,
                                                                       config.validator_key_passphrase,
                                                                       Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
@@ -195,6 +195,7 @@ if __name__ == '__main__':
                                   parents=[parser], add_help=False)
     start.set_defaults(which="start")
     start.add_argument("-c", "--config", help="Config file for running the script", required=True)
+    start.add_argument("-kf", "--key-folder", help="folder where keys will be stored", required=False,default="")
     start.add_argument("-priv", "--private-key",
                        help="private key associated with the account whitelisted with pSTAKE to make the transaction",
                        required=True)

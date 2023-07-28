@@ -1,7 +1,9 @@
 # splitting-keys
 This repo used the code [from eth2-deposit-cli](https://github.com/ethereum/staking-deposit-cli) and creates scripts 
 which can be used to create keys and signature with variable eth amount for the purpose of depositing them 
-pstake smart contracts and on deposit contract.
+pstake smart contracts and on deposit contract. \
+
+**NOTE: YOU NEED TO WHITELIST YOUR ADDRESS WITH PSTAKE TO BE ABLE TO RUN THE SCRIPT** 
 
 - Install the requirements from requirements.txt or create a virtual env.
 - For installing requirements `python -m pip install -r requirements.txt`
@@ -56,11 +58,21 @@ python node_operator.py start -c <CONFIG_FILE> -priv <PRIVATE_KEY> -m <MNEMONIC_
 
 ### Docker 
 You can also use the following docker image: `persistenceone/node-operator:latest`
+Or if you want to build your own docker image you can use the makefile to do so:
+```
+make docker-build
+```
+For running the image you can do following
+- Make a config folder with config file inside of it and fill in the values from `README_CONFIG.md`
 - To use the image mount a volume with the config file and run:
+  - CONFIG_FILE_FOLDER: folder that you created with config file inside of it
+  - PRIVATE_KEY: Private key associated with the whitelisted account with pSTAKE
   - TESTNET(BOOLEAN): Whether running on testnet(true/false)
 ```
-docker run -v <config_file_folder>:/config -it persistenceone/node-operator:latest python node_operator.py start -c /config/config.json -priv <PRIVATE_KEY> -t <TESTNET>
+docker run -v <CONFIG_FILE_FOLDER>:/config -it persistenceone/node-operator:latest python node_operator.py start -c /config/config.json -kf /config -priv <PRIVATE_KEY> -t <TESTNET>
 ```
+You can find the validator keys in the config folder you created
+
 ## Creating keys (generate)
 If you want to just generate staking keys for personal use case you can do that as well. \
 For help on running the script you can pass the following options:
