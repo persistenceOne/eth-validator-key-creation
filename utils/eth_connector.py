@@ -1,6 +1,5 @@
 from web3 import Web3
 from web3.gas_strategies.time_based import fast_gas_price_strategy
-import web3
 
 
 class EthNode:

@@ -2,6 +2,7 @@ import json
 from collections import namedtuple
 
 import requests
+from eth_typing import BLSPubkey
 from py_ecc.bls import G2ProofOfPossession as bls
 
 from staking_deposit.settings import get_chain_setting
@@ -36,6 +37,48 @@ class Helpers:
         signature = bls.Sign(private_key, signing_root)
         return signature.hex()
 
+    @staticmethod
+    def check_signature(test_chain, pubkey, withdrawal_credentials, signature) -> bool:
+        """
+
+        :param pubkey: public key for validator
+        :param withdrawal_credentials: withdrawal credential set by validator
+        :param signature: signature for deposit
+        :return: bool
+        """
+        print("checking validity of the signature")
+        if test_chain:
+            GENESIS_FORK_VERSION = bytes.fromhex('00001020')
+        else:
+            GENESIS_FORK_VERSION = bytes.fromhex('00000000')
+
+        # GENESIS_FORK_VERSION_MAINNET = bytes.fromhex('00000000')
+        # GENESIS_FORK_VERSION_PYRMONT = bytes.fromhex('00002009')
+        # GENESIS_FORK_VERSION_PRATER = bytes.fromhex('00001020')
+        # GENESIS_FORK_VERSION_LOCAL = bytes.fromhex('00100001')
+        if pubkey[:2] == "0x":
+            pubkey = BLSPubkey(bytes.fromhex(pubkey[2:]))
+        else:
+            pubkey = BLSPubkey(bytes.fromhex(pubkey))
+        if withdrawal_credentials[:2] == "0x":
+            withdrawal_credentials = BLSPubkey(bytes.fromhex(withdrawal_credentials[2:]))
+        else:
+            withdrawal_credentials = BLSPubkey(bytes.fromhex(withdrawal_credentials))
+        if signature[:2] == "0x":
+            signature = BLSPubkey(bytes.fromhex(signature[2:]))
+        else:
+            signature = BLSPubkey(bytes.fromhex(signature))
+        deposit_message = DepositMessage(pubkey=pubkey, withdrawal_credentials=withdrawal_credentials,
+                                         amount=31000000000)
+        domain = compute_deposit_domain(GENESIS_FORK_VERSION)
+        signing_root = compute_signing_root(deposit_message, domain)
+        if bls.Verify(pubkey, signing_root, signature):
+            print("signature is valid")
+            return True
+        else:
+            print("signature is invalid")
+            return False
+
 
 class Subgraph:
     graph_url = None
@@ -45,7 +88,7 @@ class Subgraph:
 
     def get_verified_result(self, node_operator_address):
         query = """{
-                validators(where:{nodeOperator:"node_operator_address",status:"VERIFIED"}) {
+                validators(where:{nodeOperator:"node_operator_address",status:"ACTIVE"}) {
                     id
                     signature
                     publicKey
@@ -62,7 +105,7 @@ class Subgraph:
 
     def get_unverified_result(self, node_operator_address):
         query = """{
-                validators(where:{nodeOperator:"node_operator_address",status:"UNVERIFIED"}) {
+                validators(where:{nodeOperator:"node_operator_address",status:"INACTIVE"}) {
                     id
                     signature
                     publicKey
@@ -76,3 +119,4 @@ class Subgraph:
             return response.json()
         else:
             response.raise_for_status()
+
