@@ -1,6 +1,5 @@
 from web3 import Web3
 from web3.gas_strategies.time_based import fast_gas_price_strategy
-import web3
 
 
 class EthNode:
@@ -16,6 +15,7 @@ class EthNode:
 
     def make_tx(self, tx):
         self.eth_node.eth.call(tx)
+
         tx['nonce'] = self.eth_node.eth.get_transaction_count(
             self.account.address)
         signed_tx = self.eth_node.eth.account.sign_transaction(

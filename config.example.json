@@ -8,5 +8,6 @@
   "eth_endpoint": "",
   "subgraph_endpoint": "",
   "validator_key_passphrase": "",
-  "validator_count": 0
+  "validator_count": 0,
+  "keys_override": 0
 }

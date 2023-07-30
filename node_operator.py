@@ -73,16 +73,15 @@ def start_staking(args):
                                                 "./utils/KeysManager.json")
             deposit_contract = DepositContract(config.contracts.deposit, eth_node.eth_node,
                                                "./utils/DepositContract.json")
-            keys = len(verified_keys) + len(unverified_keys)
+            keys_count = len(verified_keys) + len(unverified_keys) - config.keys_override
             for key in verified_keys:
                 if eth_node.get_balance(config.contracts.issuer) > 32:
                     print("Submitting Key to Issuer contract for deposit")
                     tx = issuer_contract.deposit_beacon(key["publicKey"], eth_node.account.address)
                     eth_node.make_tx(tx)
-                else:
-                    keys -= 1
-
-            if keys == 0 and len(state) == 0:
+                    keys_count -= 1
+            print(keys_count)
+            if keys_count == 0 and len(state) == 0:
                 print("You don't have any key that needs to be deposited. Creating new keys")
                 keys = ValidatorKey()
                 if args.mnemonic is None:
@@ -93,7 +92,7 @@ def start_staking(args):
                 if args.index is None:
                     args.index = 0
                     print("No index was supplied. Taking 0 as a validator starting index")
-                if args.testnet:
+                if eth_node.eth_node.eth.chain_id == 5:
                     keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
                                                                       config.validator_count, args.key_folder, GOERLI,
                                                                       config.validator_key_passphrase,
@@ -125,7 +124,7 @@ def start_staking(args):
                     priv_key = int.from_bytes(secret.decrypt(config.validator_key_passphrase), 'big')
                     pubkey = bytes(bytearray.fromhex(secret.pubkey))
                     withdrawal_credentials = bytes(bytearray.fromhex(cred.withdrawal_credentials))
-                    if args.testnet:
+                    if eth_node.eth_node.eth.chain_id == 5:
                         signature = Helpers.generate_deposit_signature_from_priv_key(GOERLI, priv_key,
                                                                                      pubkey,
                                                                                      withdrawal_credentials)
@@ -133,8 +132,12 @@ def start_staking(args):
                         signature = Helpers.generate_deposit_signature_from_priv_key(MAINNET, priv_key,
                                                                                      pubkey,
                                                                                      withdrawal_credentials)
-                    tx = keys_manager_contract.add_validator("0x" + cred.pubkey, signature, eth_node.account.address)
-                    eth_node.make_tx(tx)
+                    if Helpers.check_signature(eth_node.eth_node.eth.chain_id, "0x" + cred.pubkey,
+                                               "0x" + cred.withdrawal_credentials, signature):
+                        tx = keys_manager_contract.add_validator("0x" + cred.pubkey, signature,
+                                                                 eth_node.account.address)
+
+                        eth_node.make_tx(tx)
                     print("deposited to the pSTAKE contract")
                     del state[cred.pubkey]
                 state = {}
@@ -156,7 +159,7 @@ def start_staking(args):
                         priv_key = int.from_bytes(secret.decrypt(config.validator_key_passphrase), 'big')
                         pubkey = bytes(bytearray.fromhex(secret.pubkey))
                         withdrawal_credentials = bytes(bytearray.fromhex(cred.withdrawal_credentials))
-                        if args.testnet:
+                        if eth_node.eth_node.eth.chain_id == 5:
                             signature = Helpers.generate_deposit_signature_from_priv_key(GOERLI, priv_key,
                                                                                          pubkey,
                                                                                          withdrawal_credentials)
@@ -164,13 +167,18 @@ def start_staking(args):
                             signature = Helpers.generate_deposit_signature_from_priv_key(MAINNET, priv_key,
                                                                                          pubkey,
                                                                                          withdrawal_credentials)
-                        tx = keys_manager_contract.add_validator(Web3.toBytes(hexstr="0x" + cred.pubkey),
-                                                                 Web3.toBytes(hexstr="0x" + signature),
-                                                                 eth_node.account.address)
-                        eth_node.make_tx(tx)
+                        if Helpers.check_signature(eth_node.eth_node.eth.chain_id, "0x" + cred.pubkey,
+                                                   "0x" + cred.withdrawal_credentials, signature):
+                            tx = keys_manager_contract.add_validator(Web3.toBytes(hexstr="0x" + cred.pubkey),
+                                                                     Web3.toBytes(hexstr="0x" + signature),
+                                                                     eth_node.account.address)
+                            eth_node.make_tx(tx)
                         print("deposited to the pSTAKE contract")
                         del state[cred.pubkey]
                 state = {}
+            with open("stateFile.json", "w") as file:
+                json.dump(state, file)  # used to store the state of the system
+            file.close()
             print("sleeping for 600 sec as no keys to be generated now")
             time.sleep(600)
     except Exception as err:
@@ -180,9 +188,6 @@ def start_staking(args):
         with open("stateFile.json", "w") as file:
             json.dump(state, file)  # used to store the state of the system
         file.close()
-
-
-# {'data': {'validators': [{'id': '0x90b406f5ddcfce59a4876bf976db8ed245f7cdc213171104438e123fd4cbbe728ad9b965ebb39525c34e4a768700d068', 'signature': '0xa9ea4c502bac6f30080ce517f132a8a8fb01041bca4970fa5a800b4fbd4b26b6a31560a2aa5b9757b075f7f9c7b49ce90dc1216c24052ad28f6bb735f6b6260d5f148715d56e2e46e2b6030a8771f485d4b3b86cf13ef00398c91385d8dd41a9', 'publicKey': '0x90b406f5ddcfce59a4876bf976db8ed245f7cdc213171104438e123fd4cbbe728ad9b965ebb39525c34e4a768700d068', 'nodeOperator': '0xfb1eeed1f21645c62c622a5e90e1cf49665b8ea4', 'status': 'DEPOSITED'}, {'id': '0x92ae457d1eabc84a9508354bf4a9d9ecc39cf89ad29051b4269b7e47f6aff103a665557bf235cce05628d846539dad5c', 'signature': '0xaf8ea5a6055d426f239abe64e8bf9f0b3af788ed2bcbbe66f989eccaa737115a588be49cb72d65439b0941af5783319f0cd8328a1053acffc754637e92d45d2a43147b88233dfefebe4e30ffa143bdda8e22cb6e98e1361340bfe33de1383861', 'publicKey': '0x92ae457d1eabc84a9508354bf4a9d9ecc39cf89ad29051b4269b7e47f6aff103a665557bf235cce05628d846539dad5c', 'nodeOperator': '0xfb1eeed1f21645c62c622a5e90e1cf49665b8ea4', 'status': 'VERIFIED'}, {'id': '0x93aad8845eb5fef409c920a4971fc766c679178d7fb832dcb14e48e23289556a7fb4b475611856466387ce7dca50d377', 'signature': '0xaa83efaf4349108ccd37bfacbffe97baa736d57329ffb5692c1531b17027a6f7ae57dbcc317b4ba865a3e509d74f95590ed74067ddef1dd50a41cfe93ca7a67acf4dd7ee3c853c9619ad7e2eac82d8abe619f3756cc6ab24b415823efd7765f2', 'publicKey': '0x93aad8845eb5fef409c920a4971fc766c679178d7fb832dcb14e48e23289556a7fb4b475611856466387ce7dca50d377', 'nodeOperator': '0xfb1eeed1f21645c62c622a5e90e1cf49665b8ea4', 'status': 'VERIFIED'}, {'id': '0xa74334aefd100ab6794f7b2def00209f29fcdd87d40b7b20f9d2f33546e1a2ced0bd3f29fc0c4141f641154ef0afa28b', 'signature': '0xb666334c19a9c70d7cc863526732aa9724de1e182b79a3404999e8a0cc2ec574ead96004f4b525f1d164a9c14773f8cf10b9ddceefd7a685a970f72219cda021be55422164a30b1926b3aa14da2c22bbd70a046e1332edd39f9d056d9081f16a', 'publicKey': '0xa74334aefd100ab6794f7b2def00209f29fcdd87d40b7b20f9d2f33546e1a2ced0bd3f29fc0c4141f641154ef0afa28b', 'nodeOperator': '0xfb1eeed1f21645c62c622a5e90e1cf49665b8ea4', 'status': 'VERIFIED'}]}}
 
 
 if __name__ == '__main__':
@@ -195,7 +200,7 @@ if __name__ == '__main__':
                                   parents=[parser], add_help=False)
     start.set_defaults(which="start")
     start.add_argument("-c", "--config", help="Config file for running the script", required=True)
-    start.add_argument("-kf", "--key-folder", help="folder where keys will be stored", required=False,default="")
+    start.add_argument("-kf", "--key-folder", help="folder where keys will be stored", required=False, default="")
     start.add_argument("-priv", "--private-key",
                        help="private key associated with the account whitelisted with pSTAKE to make the transaction",
                        required=True)
