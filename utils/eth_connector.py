@@ -15,6 +15,7 @@ class EthNode:
 
     def make_tx(self, tx):
         self.eth_node.eth.call(tx)
+
         tx['nonce'] = self.eth_node.eth.get_transaction_count(
             self.account.address)
         signed_tx = self.eth_node.eth.account.sign_transaction(

@@ -80,6 +80,7 @@ def start_staking(args):
                     tx = issuer_contract.deposit_beacon(key["publicKey"], eth_node.account.address)
                     eth_node.make_tx(tx)
                     keys_count -= 1
+            print(keys_count)
             if keys_count == 0 and len(state) == 0:
                 print("You don't have any key that needs to be deposited. Creating new keys")
                 keys = ValidatorKey()
@@ -175,6 +176,9 @@ def start_staking(args):
                         print("deposited to the pSTAKE contract")
                         del state[cred.pubkey]
                 state = {}
+            with open("stateFile.json", "w") as file:
+                json.dump(state, file)  # used to store the state of the system
+            file.close()
             print("sleeping for 600 sec as no keys to be generated now")
             time.sleep(600)
     except Exception as err:
