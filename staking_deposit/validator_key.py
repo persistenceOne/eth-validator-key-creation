@@ -36,6 +36,7 @@ class ValidatorKey:
             start_index=validator_start_index,
             hex_eth1_withdrawal_address=eth1_withdrawal_address,
         )
+        print("private key is getting saved")
         self.priv_key_files = credentials.export_keystores(password=keystore_password, folder=folder)
         self.deposit_data = credentials.export_deposit_data_json(folder=folder)
         if not credentials.verify_keystores(keystore_filefolders=self.priv_key_files, password=keystore_password):

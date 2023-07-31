@@ -142,12 +142,14 @@ class Credential:
         return datum_dict
 
     def signing_keystore(self, password: str) -> Keystore:
+        print("created keystore")
         secret = self.signing_sk.to_bytes(32, 'big')
         return ScryptKeystore.encrypt(secret=secret, password=password, path=self.signing_key_path)
 
     def save_signing_keystore(self, password: str, folder: str) -> str:
         keystore = self.signing_keystore(password)
         filefolder = os.path.join(folder, 'keystore-%s-%i.json' % (keystore.path.replace('/', '_'), time.time()))
+        print(filefolder)
         keystore.save(filefolder)
         return filefolder
 

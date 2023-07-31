@@ -79,7 +79,7 @@ def start_staking(args):
                     print("Submitting Key to Issuer contract for deposit")
                     tx = issuer_contract.deposit_beacon(key["publicKey"], eth_node.account.address)
                     eth_node.make_tx(tx)
-                    keys_count -= 1
+                keys_count -= 1
             print(keys_count)
             if keys_count == 0 and len(state) == 0:
                 print("You don't have any key that needs to be deposited. Creating new keys")
