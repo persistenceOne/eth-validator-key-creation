@@ -32,7 +32,6 @@ def verify_deposit_data_json(filefolder: str, credentials: Sequence[Credential])
     """
     Validate every deposit found in the deposit-data JSON file folder.
     """
-    print(filefolder)
     with open(filefolder, 'r') as f:
         deposit_json = json.load(f)
         with click.progressbar(deposit_json, label=load_text(['msg_deposit_verification']),

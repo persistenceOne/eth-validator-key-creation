@@ -190,7 +190,7 @@ class CredentialList:
     def export_deposit_data_json(self, folder: str) -> str:
         deposit_data = [cred.deposit_datum_dict for cred in self.credentials]
         deposit_file_name = 'deposit_data-%i.json' % time.time()
-        filefolder = os.path.join(folder, 'deposit_data-%i.json' % time.time())
+        filefolder = os.path.join(folder, deposit_file_name)
         with open(filefolder, 'w') as f:
             json.dump(deposit_data, f, default=lambda x: x.hex())
         if os.name == 'posix':
