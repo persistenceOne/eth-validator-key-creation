@@ -1,4 +1,5 @@
 import json
+import logging
 from collections import namedtuple
 
 import requests
@@ -46,7 +47,6 @@ class Helpers:
         :param signature: signature for deposit
         :return: bool
         """
-        print("checking validity of the signature")
         if test_chain:
             GENESIS_FORK_VERSION = bytes.fromhex('00001020')
         else:
@@ -73,10 +73,10 @@ class Helpers:
         domain = compute_deposit_domain(GENESIS_FORK_VERSION)
         signing_root = compute_signing_root(deposit_message, domain)
         if bls.Verify(pubkey, signing_root, signature):
-            print("signature is valid")
+            logging.info("signature is valid")
             return True
         else:
-            print("signature is invalid")
+            logging.info("signature is invalid")
             return False
 
 

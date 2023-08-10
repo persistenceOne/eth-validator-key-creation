@@ -2,14 +2,13 @@ import argparse
 import json
 import time
 import traceback
-
 from web3 import Web3
+import logging
 from staking_deposit.exceptions import ValidationError
 from staking_deposit.key_handling.key_derivation.mnemonic import get_mnemonic
 from staking_deposit.utils.constants import WORD_LISTS_PATH, MIN_DEPOSIT_AMOUNT, MAX_DEPOSIT_AMOUNT
-from staking_deposit.settings import get_chain_setting, MAINNET, PRATER, GOERLI
-from staking_deposit.utils.validation import verify_deposit_data_json
-from staking_deposit.validator_key import ValidatorKey, DepositData
+from staking_deposit.settings import MAINNET, GOERLI
+from staking_deposit.validator_key import ValidatorKey
 from utils.helpers import Helpers, Subgraph
 from utils.eth_connector import EthNode
 from utils.contracts import Issuer, DepositContract, KeysManager
@@ -56,12 +55,14 @@ def start_staking(args):
     :param args:
     :return:
     """
-    print(args)
+    logging.info("Arguments supplied")
+    logging.info(args)
     config = Helpers.read_file(args.config)
-    print(config)
-    with open("stateFile.json", "r") as file:
+    logging.info("Config file supplied:")
+    logging.info(config)
+    statefile_path = "stateFile.json" if args.key_folder == '' else args.key_folder + "/stateFile.json"
+    with open(statefile_path, "r") as file:
         state = json.load(file)  # used to store the state of the system
-    file.close()
     try:
         while True:
             subgraph = Subgraph(config.subgraph_endpoint)
@@ -76,41 +77,61 @@ def start_staking(args):
             keys_count = len(verified_keys) + len(unverified_keys) - config.keys_override
             for key in verified_keys:
                 if eth_node.get_balance(config.contracts.issuer) > 32:
-                    print("Submitting Key to Issuer contract for deposit")
+                    logging.info("Submitting Key to Issuer contract for deposit")
                     tx = issuer_contract.deposit_beacon(key["publicKey"], eth_node.account.address)
                     eth_node.make_tx(tx)
                 keys_count -= 1
-            print(keys_count)
-            if keys_count == 0 and len(state) == 0:
-                print("You don't have any key that needs to be deposited. Creating new keys")
+            logging.info("keys that need activation:" + str(keys_count))
+            if keys_count == 0 and len(state["keys"]) == 0:
+                logging.info("You don't have any key that needs to be deposited. Creating new keys")
                 keys = ValidatorKey()
                 if args.mnemonic is None:
                     args.mnemonic = get_mnemonic(language="english", words_path=WORD_LISTS_PATH)
-                    print("""==================\nGENERATED A MNEMONIC FOR YOUR VALIDATOR KEYS:
+                    logging.warning("No mnemonic is supplied. If this was not intended STOP THE SCRIPT!!")
+                    logging.warning("""==================\nGENERATED A MNEMONIC FOR YOUR VALIDATOR KEYS:
                     \n\n{} \n \nPlease save it for future use as a backup mechanism \n================== """.format(
                         args.mnemonic))
-                if args.index is None:
-                    args.index = 0
-                    print("No index was supplied. Taking 0 as a validator starting index")
+                if "mnemonic" not in state.keys() or state["mnemonic"] == "":
+                    state["mnemonic"] = Web3.keccak(text=args.mnemonic).hex()
+                else:
+                    if state["mnemonic"] != Web3.keccak(text=args.mnemonic).hex():
+                        logging.warning(
+                            "A new mnemonic was supplied which is different from last time. If this was not intended STOP THE SCRIPT!!")
+                        state["mnemonic"] = Web3.keccak(text=args.mnemonic).hex()
+                        if "index" not in state.keys():
+                            logging.warning(
+                                "No index found in the statefile. Using 0 as index. If this was not intended STOP THE SCRIPT!!")
+                            state["index"] = 0
+
                 if eth_node.eth_node.eth.chain_id == 5:
-                    keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
+                    logging.debug("generating keys for testnet")
+                    keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(state["index"]),
                                                                       config.validator_count, args.key_folder, GOERLI,
                                                                       config.validator_key_passphrase,
                                                                       Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
                                                                       MIN_DEPOSIT_AMOUNT)
+                    logging.info("validator keys are:")
+                    logging.info(keystore_files)
+                    logging.info("deposit file:")
+                    logging.info(deposit_file)
                 else:
-                    keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(args.index),
+                    logging.debug("generating keys for mainnet")
+                    keystore_files, deposit_file = keys.generate_keys(args.mnemonic, int(state["index"]),
                                                                       config.validator_count, args.key_folder, MAINNET,
                                                                       config.validator_key_passphrase,
                                                                       Web3.toChecksumAddress(
                                                                           config.contracts.withdrawal_address),
                                                                       MIN_DEPOSIT_AMOUNT)
-                print("making deposit to deposit contract and pSTAKE contract")
-                state["deposit_file"] = deposit_file
+                    logging.info("validator keys are:")
+                    logging.info(keystore_files)
+                    logging.info("deposit file:")
+                    logging.info(deposit_file)
+                logging.info("making deposit to deposit contract and pSTAKE contract")
+                state["keys"]["deposit_file"] = deposit_file
                 for index, cred in enumerate(keys.get_deposit_data(deposit_file)):
-                    state[cred.pubkey] = {"file": keystore_files[index], "deposited": False}
-                args.index += 2
+                    state["keys"][cred.pubkey] = {"file": keystore_files[index], "deposited": False}
+                state["index"] += config.validator_count
                 for index, cred in enumerate(keys.get_deposit_data(deposit_file)):
                     tx = deposit_contract.deposit_validator("0x" + cred.pubkey,
                                                             "0x" + cred.withdrawal_credentials,
@@ -118,76 +139,81 @@ def start_staking(args):
                                                             "0x" + cred.deposit_data_root,
                                                             eth_node.account.address)
                     eth_node.make_tx(tx)
-                    print("deposited to the deposit contract")
-                    state[cred.pubkey]["deposited"] = True
+                    logging.info("deposited to the deposit contract")
+                    state["keys"][cred.pubkey]["deposited"] = True
                     secret = Keystore.from_file(keystore_files[index])
                     priv_key = int.from_bytes(secret.decrypt(config.validator_key_passphrase), 'big')
                     pubkey = bytes(bytearray.fromhex(secret.pubkey))
                     withdrawal_credentials = bytes(bytearray.fromhex(cred.withdrawal_credentials))
+                    logging.debug("generating signature to submit to pSTAKE")
                     if eth_node.eth_node.eth.chain_id == 5:
+                        logging.debug("generating signature for testnet")
                         signature = Helpers.generate_deposit_signature_from_priv_key(GOERLI, priv_key,
                                                                                      pubkey,
                                                                                      withdrawal_credentials)
                     else:
+                        logging.debug("generating signature for mainnet")
                         signature = Helpers.generate_deposit_signature_from_priv_key(MAINNET, priv_key,
                                                                                      pubkey,
                                                                                      withdrawal_credentials)
+                    logging.debug("verifying the signature generated")
                     if Helpers.check_signature(eth_node.eth_node.eth.chain_id, "0x" + cred.pubkey,
                                                "0x" + cred.withdrawal_credentials, signature):
                         tx = keys_manager_contract.add_validator("0x" + cred.pubkey, signature,
                                                                  eth_node.account.address)
 
                         eth_node.make_tx(tx)
-                    print("deposited to the pSTAKE contract")
-                    del state[cred.pubkey]
-                state = {}
-            elif len(state) != 0:
+                    logging.info("deposited to the pSTAKE contract")
+                    del state["keys"][cred.pubkey]
+            elif len(state["keys"]) != 0:
+                logging.info("retrying failed tx from state file")
                 keys = ValidatorKey()
-                for index, cred in enumerate(keys.get_deposit_data(state["deposit_file"])):
-                    if cred.pubkey in state:
-                        if not state[cred.pubkey]["deposited"]:
+                for index, cred in enumerate(keys.get_deposit_data(state["keys"]["deposit_file"])):
+                    if cred.pubkey in state["keys"]:
+                        if not state["keys"][cred.pubkey]["deposited"]:
                             tx = deposit_contract.deposit_validator("0x" + cred.pubkey,
                                                                     "0x" + cred.withdrawal_credentials,
                                                                     "0x" + cred.signature,
                                                                     "0x" + cred.deposit_data_root,
                                                                     eth_node.account.address)
                             eth_node.make_tx(tx)
-                            print("deposited to the deposit contract")
-                            state[cred.pubkey]["deposited"] = True
-
-                        secret = Keystore.from_file(state[cred.pubkey]["file"])
+                            logging.info("deposited to the deposit contract")
+                            state["keys"][cred.pubkey]["deposited"] = True
+                        secret = Keystore.from_file(state["keys"][cred.pubkey]["file"])
                         priv_key = int.from_bytes(secret.decrypt(config.validator_key_passphrase), 'big')
                         pubkey = bytes(bytearray.fromhex(secret.pubkey))
                         withdrawal_credentials = bytes(bytearray.fromhex(cred.withdrawal_credentials))
+                        logging.debug("generating signature to submit to pSTAKE")
                         if eth_node.eth_node.eth.chain_id == 5:
+                            logging.debug("generating signature for testnet")
                             signature = Helpers.generate_deposit_signature_from_priv_key(GOERLI, priv_key,
                                                                                          pubkey,
                                                                                          withdrawal_credentials)
                         else:
+                            logging.debug("generating signature for mainnet")
                             signature = Helpers.generate_deposit_signature_from_priv_key(MAINNET, priv_key,
                                                                                          pubkey,
                                                                                          withdrawal_credentials)
+                        logging.debug("verifying the signature generated")
                         if Helpers.check_signature(eth_node.eth_node.eth.chain_id, "0x" + cred.pubkey,
                                                    "0x" + cred.withdrawal_credentials, signature):
                             tx = keys_manager_contract.add_validator(Web3.toBytes(hexstr="0x" + cred.pubkey),
                                                                      Web3.toBytes(hexstr="0x" + signature),
                                                                      eth_node.account.address)
                             eth_node.make_tx(tx)
-                        print("deposited to the pSTAKE contract")
-                        del state[cred.pubkey]
-                state = {}
-            with open("stateFile.json", "w") as file:
+                        logging.info("deposited to the pSTAKE contract")
+                        del state["keys"][cred.pubkey]
+                state["keys"] = {}
+            with open(statefile_path, "w") as file:
                 json.dump(state, file)  # used to store the state of the system
-            file.close()
-            print("sleeping for 600 sec as no keys to be generated now")
+            logging.info("sleeping for 600 sec as no keys to be generated now")
             time.sleep(600)
     except Exception as err:
-        print("ERROR! SCRIPT STOPPED!!")
+        logging.error("ERROR! SCRIPT STOPPED!!")
+        logging.error(err)
         print(traceback.format_exc())
-        print(err)
-        with open("stateFile.json", "w") as file:
+        with open(statefile_path, "w") as file:
             json.dump(state, file)  # used to store the state of the system
-        file.close()
 
 
 if __name__ == '__main__':
@@ -207,10 +233,10 @@ if __name__ == '__main__':
     start.add_argument("-m", "--mnemonic",
                        help="mnemonic to generate validator keys. If not present the script will generate one",
                        required=False)
-    start.add_argument("-i", "--index",
-                       help="""starting index for the validator keys to be generated. 
-                               If using mnemonic, supply this or else the system will assume 0 to be starting index""",
-                       required=False)
+    start.add_argument('-d', '--debug', help="Print logs used for debugging", action="store_const", dest="loglevel",
+                       const=logging.DEBUG, default=logging.WARNING)
+    start.add_argument('-v', '--verbose', help="Verbose Logging", action="store_const", dest="loglevel",
+                       const=logging.INFO)
     generate = subparsers.add_parser("generate", help="Generate validator keys", parents=[parser], add_help=False)
     generate.set_defaults(which="generate")
 
@@ -232,6 +258,13 @@ if __name__ == '__main__':
                           required=False, default="")
     args = parser.parse_args()
     if args.which == "start":
+        logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=args.loglevel)
+        logging.info(args)
+        logging.info("pSTAKE validator key creation started at started at: {}".format(time.time()))
+        logging.getLogger("web3.RequestManager").setLevel(logging.WARNING)
+        logging.getLogger("web3.providers.HTTPProvider").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
         start_staking(args)
     elif args.which == "generate":
         generate_keys(args)

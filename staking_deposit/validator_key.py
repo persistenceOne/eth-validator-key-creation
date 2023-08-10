@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from collections import namedtuple
 from typing import Any
@@ -36,13 +37,15 @@ class ValidatorKey:
             start_index=validator_start_index,
             hex_eth1_withdrawal_address=eth1_withdrawal_address,
         )
-        print("private key is getting saved")
+        logging.debug("private key generating. Writing to file")
         self.priv_key_files = credentials.export_keystores(password=keystore_password, folder=folder)
+        logging.debug("private key saved files")
+        logging.debug("writing deposit data file")
         self.deposit_data = credentials.export_deposit_data_json(folder=folder)
+        logging.debug("verifying keystore file")
         if not credentials.verify_keystores(keystore_filefolders=self.priv_key_files, password=keystore_password):
             raise ValidationError(load_text(['err_verify_keystores']))
-        print(self.priv_key_files)
-        print(self.deposit_data)
+        logging.debug("verifying deposit data file")
         if not verify_deposit_data_json(self.deposit_data, credentials.credentials):
             raise ValidationError(load_text(['err_verify_deposit']))
         return self.priv_key_files, self.deposit_data
@@ -50,7 +53,6 @@ class ValidatorKey:
     def get_deposit_data(self, deposit_data_file) -> List[DepositData]:
         with open(deposit_data_file, "r") as file:
             deposit = json.load(file)
-        file.close()
         data = []
         for key in deposit:
             data.append(

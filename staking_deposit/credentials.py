@@ -142,14 +142,12 @@ class Credential:
         return datum_dict
 
     def signing_keystore(self, password: str) -> Keystore:
-        print("created keystore")
         secret = self.signing_sk.to_bytes(32, 'big')
         return ScryptKeystore.encrypt(secret=secret, password=password, path=self.signing_key_path)
 
     def save_signing_keystore(self, password: str, folder: str) -> str:
         keystore = self.signing_keystore(password)
         filefolder = os.path.join(folder, 'keystore-%s-%i.json' % (keystore.path.replace('/', '_'), time.time()))
-        print(filefolder)
         keystore.save(filefolder)
         return filefolder
 
@@ -192,7 +190,7 @@ class CredentialList:
     def export_deposit_data_json(self, folder: str) -> str:
         deposit_data = [cred.deposit_datum_dict for cred in self.credentials]
         deposit_file_name = 'deposit_data-%i.json' % time.time()
-        filefolder = os.path.join(folder, 'deposit_data-%i.json' % time.time())
+        filefolder = os.path.join(folder, deposit_file_name)
         with open(filefolder, 'w') as f:
             json.dump(deposit_data, f, default=lambda x: x.hex())
         if os.name == 'posix':
